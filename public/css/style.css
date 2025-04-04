@@ -71,7 +71,7 @@ body {
      color: rgb(189, 55, 55); /* Add hover effect */
  }
 
-.card{
+.listing-card{
     border: none !important;
     margin-bottom: 2rem;
 }
