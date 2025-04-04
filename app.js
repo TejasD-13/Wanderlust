@@ -1,0 +1,118 @@
+const express = require("express");
+const app = express();
+const Listing = require("./models/listing.js");
+const mongoose = require('mongoose');
+const path = require("path");
+const methodOverride = require("method-override");
+const ejsMate = require("ejs-mate");
+
+// Database connection
+mongoose.connect('mongodb://127.0.0.1:27017/wanderlust')
+    .then(() => console.log('MongoDB Connected Successfully'))
+    .catch(err => console.error('MongoDB Connection Error:', err));
+
+// Middleware
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
+app.engine('ejs', ejsMate);
+app.use(express.static(path.join(__dirname, "public")));
+
+// Root route
+app.get("/", (req, res) => {
+    res.send("Hi, I am root");
+});
+
+// Index route
+app.get("/listings", async (req, res) => {
+    const allListings = await Listing.find({});
+    res.render("listings/index", { allListings });
+});
+
+// New route
+app.get("/listings/new", (req, res) => {
+    res.render("listings/new");
+});
+
+// Create route
+app.post("/listings", async (req, res) => {
+    try {
+        const { listing } = req.body;
+        
+        // Create new image object
+        const newListing = new Listing({
+            ...listing,
+            image: {
+                url: listing.image,
+                filename: 'listingimage'
+            }
+        });
+
+        await newListing.save();
+        res.redirect(`/listings/${newListing._id}`);
+    } catch (err) {
+        console.error(err);
+        res.send("Error creating listing. Please ensure all required fields are filled.");
+    }
+});
+
+// Show route
+app.get("/listings/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const listing = await Listing.findById(id);
+        res.render("listings/show", { listing });
+    } catch (err) {
+        console.error(err);
+        res.send("Listing not found.");
+    }
+});
+
+// Edit route
+app.get("/listings/:id/edit", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const listing = await Listing.findById(id);
+        res.render("listings/edit", { listing });
+    } catch (err) {
+        console.error(err);
+        res.send("Listing not found.");
+    }
+});
+
+// Update route
+app.put("/listings/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { listing } = req.body;
+
+        // Update image structure
+        const updatedListing = {
+            ...listing,
+            image: {
+                url: listing.image,
+                filename: 'listingimage'
+            }
+        };
+
+        await Listing.findByIdAndUpdate(id, updatedListing);
+        res.redirect(`/listings/${id}`);
+    } catch (err) {
+        console.error(err);
+        res.send("Error updating the listing. Please try again.");
+    }
+});
+
+// Delete route 
+app.delete("/listings/:id", async (req, res) => {
+    let { id } = req.params;
+    let deleteListing = await Listing.findByIdAndDelete(id);
+    console.log(deleteListing);
+    res.redirect("/listings");
+});
+
+// Listener
+app.listen(8080, () => {
+    console.log("Server is listening on port 8080");
+});
